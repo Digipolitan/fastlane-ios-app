@@ -22,8 +22,7 @@ lane :publish_app_beta do |options|
   version = get_version_number()
   build = get_build_number()
   add_git_tag(
-    prefix: prefix_versiontag,
-    build_number: "#{version}-beta#{build}"
+    tag: "#{prefix_versiontag}#{version}-beta#{build}"
   )
   push_to_git_remote()
   build = increment_build_number()
