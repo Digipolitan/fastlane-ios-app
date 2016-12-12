@@ -1,0 +1,37 @@
+lane :publish_app_beta do |options|
+  ensure_git_status_clean()
+  ensure_git_flow_init()
+  beta_branch = nil
+  begin
+    beta_branch = Actions.sh("git config --get fastlane.branch.beta").strip()
+  rescue
+    beta_branch = UI.input("Branch name for beta releases: [beta] ")
+    if beta_branch.length == 0
+      beta_branch = "beta"
+    end
+    Actions.sh("git config fastlane.branch.beta #{beta_branch}")
+  end
+  develop_branch = Actions.sh("git config --get gitflow.branch.develop").strip()
+  prefix_versiontag = Actions.sh("git config --get gitflow.prefix.versiontag").strip()
+  if git_branch_exists(branch: beta_branch)
+    Actions.sh("git checkout #{beta_branch}")
+    Actions.sh("git merge #{develop_branch}")
+  else
+    Actions.sh("git checkout -b #{beta_branch} #{develop_branch}")
+  end
+  version = get_version_number()
+  build = get_build_number()
+  add_git_tag(
+    prefix: prefix_versiontag,
+    build_number: "#{version}-beta#{build}"
+  )
+  push_to_git_remote()
+  build = increment_build_number()
+  git_commit(
+    path: ["."],
+    message: "Bumped build number to #{build}"
+  )
+  Actions.sh("git checkout #{develop_branch}")
+  Actions.sh("git merge #{beta_branch}")
+  push_to_git_remote()
+end
