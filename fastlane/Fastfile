@@ -76,6 +76,9 @@ lane :publish_app_beta do |options|
   ensure_git_status_clean()
   ensure_git_flow_init()
   develop_branch = Actions.sh("git config --get gitflow.branch.develop", log: false).strip()
+  if git_branch() != develop_branch
+    UI.user_error! "Run this lane only on the #{develop_branch} branch"
+  end
   beta_branch = get_beta_branch()
   if git_branch_exists(branch: beta_branch)
     Actions.sh("git checkout #{beta_branch}")

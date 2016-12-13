@@ -5,9 +5,14 @@ fastlane documentation
 sudo gem install fastlane
 ```
 # Available Actions
-### next_version
+### ensure_release_version
 ```
-fastlane next_version
+fastlane ensure_release_version
+```
+
+### ensure_beta_version
+```
+fastlane ensure_beta_version
 ```
 
 ### publish_app_beta
