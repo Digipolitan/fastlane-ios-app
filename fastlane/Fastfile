@@ -1,3 +1,33 @@
+lane :next_version do |options|
+  ensure_git_status_clean()
+  prepare_lane_options(
+    options: options,
+    mapping: {
+      :version => {:env_var => "DG_RELEASE_VERSION"},
+      :build => {
+        :env_var => "DG_BUILD_NUMBER",
+        :default_value => "1"
+      },
+      :project => {:env_var => "DG_PROJECT"},
+      :bump_type => {:env_var => "DG_BUMP_TYPE"}
+    }
+  )
+  release_version = increment_version_number(
+    xcodeproj: options[:project],
+    version_number: options[:version],
+    bump_type: options[:bump_type]
+  )
+  build_number = increment_build_number(
+    xcodeproj: options[:project],
+    build_number: options[:build]
+  )
+  git_commit(
+    path: ["."],
+    message: "Bumped release version '#{release_version}', build number ##{build_number}"
+  )
+  UI.success "Release '#{release_version}', build number ##{build_number} created."
+end
+
 lane :publish_app_beta do |options|
   ensure_git_status_clean()
   ensure_git_flow_init()
@@ -21,6 +51,31 @@ lane :publish_app_beta do |options|
   end
   version = get_version_number()
   build = get_build_number()
+  tag = "#{prefix_versiontag}#{version}-beta#{build}"
+  if git_tag_exists(tag: tag)
+    UI.error "The version '#{version}' beta #{build} exists"
+    action = UI.select("Would you like to increment the build number or update the version ?", ["build", "version", "cancel"])
+    if action == "build"
+      build_int = build.to_i
+      build_int += 1
+      next_version(
+        version: version,
+        build: build_int.to_s,
+        project: options[:project]
+      )
+    elsif action == "version"
+      bump_type = UI.select("Select version the bump type: ", ["patch", "minor", "major"])
+      next_version(
+        bump_type: bump_type,
+        project: options[:project]
+      )
+    else
+      UI.user_error! "Cannot publish the curernt beta version (tag exists)"
+    end
+  end
+  if !UI.confirm("Are you sure to submit beta version '#{version}' build ##{build} ?")
+    UI.user_error! "User abort beta version"
+  end
   add_git_tag(
     tag: "#{prefix_versiontag}#{version}-beta#{build}"
   )
@@ -28,7 +83,7 @@ lane :publish_app_beta do |options|
   build = increment_build_number()
   git_commit(
     path: ["."],
-    message: "Bumped build number to #{build}"
+    message: "Bumped build number ##{build}"
   )
   Actions.sh("git checkout #{develop_branch}")
   Actions.sh("git merge #{beta_branch}")
