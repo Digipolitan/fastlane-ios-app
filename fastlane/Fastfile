@@ -1,68 +1,3 @@
-lane :select_new_release_version do |options|
-  prepare_lane_options(
-    options: options,
-    required_keys: [
-      :current_version_number
-    ]
-  )
-  version_number = options[:current_version_number]
-  UI.error "You must update your version '#{version_number}'"
-  bump_type = UI.select("Select version bump type: ", ["patch", "minor", "major"])
-  get_next_version_number(
-    version_number: version_number,
-    bump_type: bump_type
-  )
-  lane_context[SharedValues::NEXT_BUILD_NUMBER] = "1"
-end
-
-lane :select_new_build_number do |options|
-  prepare_lane_options(
-    options: options,
-    required_keys: [
-      :current_build_number
-    ]
-  )
-  build_number = options[:current_build_number]
-  UI.error "You must update your build number ##{build_number}"
-  bump_type = UI.input("Set the build number [press enter to auto-increment] ")
-  if bump_type.length == 0
-    get_next_build_number(build_number: build_number)
-  else
-    lane_context[SharedValues::NEXT_BUILD_NUMBER] = bump_type
-  end
-end
-
-lane :ensure_next_release_version do |options|
-  ensure_git_flow_init()
-  prepare_lane_options(
-    options: options,
-    mapping: {
-      :prefix_versiontag => {:lane_context => SharedValues::GIT_FLOW_VERSIONTAG_PREFIX},
-    },
-    required_keys: [
-      :current_version_number,
-      :current_build_number
-    ]
-  )
-  prefix_versiontag = options[:prefix_versiontag]
-  version_number = options[:current_version_number]
-  build_number = options[:current_build_number]
-  while git_tag_exists(tag: "#{prefix_versiontag}#{version_number}") do
-    select_new_release_version(current_version_number: version_number)
-    version_number = lane_context[SharedValues::NEXT_VERSION_NUMBER];
-    build_number = lane_context[SharedValues::NEXT_BUILD_NUMBER];
-  end
-  while git_tag_exists(tag: "#{prefix_versiontag}#{version_number}##{build_number}") do
-    select_new_build_number(current_build_number: build_number)
-    build_number = lane_context[SharedValues::NEXT_BUILD_NUMBER];
-  end
-  UI.success "Release version '#{version_number}' build ##{build_number} ready"
-  lane_context[SharedValues::NEXT_VERSION_NUMBER] = version_number
-  lane_context[SharedValues::NEXT_BUILD_NUMBER] = build_number
-  lane_context[:DG_RELEASE_TAG] = "#{prefix_versiontag}#{version_number}"
-  lane_context[:DG_BUILD_TAG] = "#{prefix_versiontag}#{version_number}##{build_number}"
-end
-
 private_lane :prepare_app_release do |options|
   ensure_git_status_clean()
   ensure_git_flow_init()
@@ -78,7 +13,7 @@ private_lane :prepare_app_release do |options|
   end
   version_number = get_version_number(xcodeproj: options[:project])
   build_number = get_build_number(xcodeproj: options[:project])
-  ensure_next_release_version(
+  ensure_version_availability(
     current_version_number: version_number,
     current_build_number: build_number
   )

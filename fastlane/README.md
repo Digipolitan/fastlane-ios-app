@@ -5,21 +5,6 @@ fastlane documentation
 sudo gem install fastlane
 ```
 # Available Actions
-### select_new_release_version
-```
-fastlane select_new_release_version
-```
-
-### select_new_build_number
-```
-fastlane select_new_build_number
-```
-
-### ensure_next_release_version
-```
-fastlane ensure_next_release_version
-```
-
 ### start_app_release
 ```
 fastlane start_app_release
