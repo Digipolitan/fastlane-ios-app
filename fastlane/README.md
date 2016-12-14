@@ -15,14 +15,19 @@ fastlane select_new_release_version
 fastlane select_new_build_number
 ```
 
-### ensure_release_version
+### ensure_next_release_version
 ```
-fastlane ensure_release_version
+fastlane ensure_next_release_version
 ```
 
 ### start_app_release
 ```
 fastlane start_app_release
+```
+
+### update_app_release
+```
+fastlane update_app_release
 ```
 
 

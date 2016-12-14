@@ -128,8 +128,8 @@ lane :start_app_release do |options|
       name: version
     )
   rescue
-    UI.user_error! "Cannot start release '#{version}', you are probably starting the current release version, \
-    * if you want to update a new build release use the following lane : 'update_app_release' \
+    UI.user_error! "Cannot start release '#{version}', you are probably starting the current release version\n\
+    * if you want to update a new build release use the following lane : 'update_app_release'\n\
     * if you want to publish the release use the lane : 'publish_app_release'"
   end
   send_app_release(options)
@@ -141,7 +141,12 @@ lane :update_app_release do |options|
   version_number = lane_context[SharedValues::NEXT_VERSION_NUMBER]
   prefix_release = lane_context[SharedValues::GIT_FLOW_RELEASE_PREFIX]
   release_branch = "#{prefix_release}#{version_number}"
-  Actions.sh("git checkout #{release_branch}")
+  begin
+    Actions.sh("git checkout #{release_branch}")
+  rescue
+    UI.user_error! "Cannot update release '#{version}', unknown release version\n\
+    * first you need to start a new release version with the following lane : 'start_app_release'"
+  end
   Actions.sh("git merge #{develop_branch}")
   send_app_release(options)
 end
