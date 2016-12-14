@@ -49,12 +49,12 @@ lane :ensure_release_version do |options|
   version_number = options[:current_version_number]
   build_number = options[:current_build_number]
   while git_tag_exists(tag: "#{prefix_versiontag}#{version_number}") do
-    select_new_release_version(version_number: version_number)
+    select_new_release_version(current_version_number: version_number)
     version_number = lane_context[:VERSION_NUMBER];
     build_number = lane_context[:BUILD_NUMBER];
   end
   while git_tag_exists(tag: "#{prefix_versiontag}#{version_number}##{build_number}") do
-    select_new_build_number(build_number: build_number)
+    select_new_build_number(current_build_number: build_number)
     build_number = lane_context[:BUILD_NUMBER];
   end
   UI.success "Release version '#{version_number}' build ##{build_number} ready"
