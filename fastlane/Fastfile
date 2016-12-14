@@ -1,103 +1,116 @@
+lane :select_new_release_version do |options|
+  prepare_lane_options(
+    options: options,
+    required_keys: [
+      :current_version_number
+    ]
+  )
+  version_number = options[:current_version_number]
+  UI.error "You must update your version '#{version_number}'"
+  bump_type = UI.select("Select version bump type: ", ["patch", "minor", "major"])
+  lane_context[:DG_RELEASE_VERSION_NUMBER] = get_next_version_number(
+    version_number: version_number,
+    bump_type: bump_type
+  )
+  lane_context[:DG_BUILD_NUMBER] = "1"
+end
+
+lane :select_new_build_number do |options|
+  prepare_lane_options(
+    options: options,
+    required_keys: [
+      :current_build_number
+    ]
+  )
+  build_number = options[:current_build_number]
+  UI.error "You must update your build number ##{build_number}"
+  bump_type = UI.input("Set the build number [auto-increment] ")
+  if bump_type.length == 0
+    build_number = get_next_build_number(build_number: build_number)
+  else
+    build_number = bump_type
+  end
+  lane_context[:DG_BUILD_NUMBER] = build_number
+end
+
 lane :ensure_release_version do |options|
   ensure_git_flow_init()
   prepare_lane_options(
     options: options,
     mapping: {
-      :project => {:env_var => "DG_PROJECT"}
-    }
+      :prefix_versiontag => {:lane_context => SharedValues::GIT_FLOW_VERSIONTAG_PREFIX},
+    },
+    required_keys: [
+      :current_version_number,
+      :current_build_number
+    ]
   )
-  prefix_versiontag = Actions.sh("git config --get gitflow.prefix.versiontag").strip()
-  current_version = get_version_number(
-    xcodeproj: options[:project]
-  )
-  build_number = get_build_number(
-    xcodeproj: options[:project]
-  )
-  version = current_version
-  while git_tag_exists(tag: "#{prefix_versiontag}#{version}") do
-    UI.error "The version '#{version}' exists, you must update the version"
-    bump_type = UI.select("Select version bump type: ", ["patch", "minor", "major"])
-    version = increment_version_number(
-      xcodeproj: options[:project],
-      bump_type: bump_type
-    )
-    build_number = increment_build_number(
-      xcodeproj: options[:project],
-      build_number: "1"
-    )
+  prefix_versiontag = options[:prefix_versiontag]
+  version_number = options[:current_version_number]
+  build_number = options[:current_build_number]
+  while git_tag_exists(tag: "#{prefix_versiontag}#{version_number}") do
+    select_new_release_version(version_number: version_number)
+    version_number = lane_context[:DG_RELEASE_VERSION_NUMBER];
+    build_number = lane_context[:DG_BUILD_NUMBER];
   end
-  if version != current_version
-    git_commit(
-      path: ["."],
-      message: "Bumped release version to '#{version}'"
-    )
+  while git_tag_exists(tag: "#{prefix_versiontag}#{version_number}##{build_number}") do
+    select_new_build_number(build_number: build_number)
+    build_number = lane_context[:DG_BUILD_NUMBER];
   end
-  UI.success "Release version #{version} ready"
-  lane_context[:DG_RELEASE_VERSION] = version
+  UI.success "Release version '#{version_number}' build ##{build_number} ready"
+  lane_context[:DG_RELEASE_TAG] = "#{prefix_versiontag}#{version_number}"
+  lane_context[:DG_RELEASE_VERSION_NUMBER] = version_number
   lane_context[:DG_BUILD_NUMBER] = build_number
+  lane_context[:DG_BUILD_TAG] = "#{prefix_versiontag}#{version}##{build_number}"
 end
 
-lane :ensure_beta_version do |options|
+lane :start_app_release do |options|
+  ensure_git_status_clean()
   ensure_git_flow_init()
   prepare_lane_options(
     options: options,
     mapping: {
-      :project => {:env_var => "DG_PROJECT"}
+      :project => {:env_var => "DG_PROJECT"},
+      :develop_branch => {:lane_context => SharedValues::GIT_FLOW_DEVELOP_BRANCH},
     }
   )
-  version = get_version_number(
-    xcodeproj: options[:project]
+  project = options[:project];
+  current_version_number = get_version_number(xcodeproj: project)
+  current_build_number = get_build_number(xcodeproj: project)
+  ensure_release_version(
+    current_version_number: current_version_number,
+    current_build_number: current_build_number
   )
-  current_build_number = get_build_number(
-    xcodeproj: options[:project]
-  )
-  build_number = current_build_number
-  while git_tag_exists(tag: get_beta_tag(version: version, build_number: build_number)) do
-    UI.error "The version '#{version}' beta ##{build_number} exists, you must update the build number"
-    bump_type = UI.input("Set the build number [auto-increment] ")
-    next_number = bump_type.length == 0 ? nil : bump_type
-    build_number = increment_build_number(
-      xcodeproj: options[:project],
-      build_number: next_number
-    )
+  release_version_number = lane_context[:DG_RELEASE_VERSION_NUMBER]
+  build_number = lane_context[:DG_BUILD_NUMBER]
+  if !UI.confirm("Are you sure to submit version '#{release_version_number}' build ##{build_number} ?")
+    UI.user_error! "User abort version"
   end
-  if build_number != current_build_number
+  git_flow_release(
+    action: "start",
+    name: release_version_number
+  )
+  if current_version_number != release_version_number || current_build_number != build_number
+    increment_version_number(
+      xcodeproj: project,
+      version_number: release_version_number
+    )
+    increment_build_number(
+      xcodeproj: project,
+      build_number: build_number
+    )
     git_commit(
       path: ["."],
-      message: "Bumped build number to ##{build_number}"
+      message: "Bumped release version '#{release_version_number}' build ##{build_number}"
     )
   end
-  UI.success "Beta version '#{version}' beta ##{build_number} ready"
-  lane_context[:DG_BETA_VERSION] = version
-  lane_context[:DG_BUILD_NUMBER] = build_number
-end
-
-lane :publish_app_beta do |options|
-  ensure_git_status_clean()
-  ensure_git_flow_init()
-  develop_branch = Actions.sh("git config --get gitflow.branch.develop", log: false).strip()
-  if git_branch() != develop_branch
-    UI.user_error! "Run this lane only on the #{develop_branch} branch"
-  end
-  beta_branch = get_beta_branch()
-  if git_branch_exists(branch: beta_branch)
-    Actions.sh("git checkout #{beta_branch}")
-    Actions.sh("git merge #{develop_branch}")
-  else
-    Actions.sh("git checkout -b #{beta_branch} #{develop_branch}")
-  end
-  ensure_release_version()
-  ensure_beta_version()
-  version = lane_context[:DG_BETA_VERSION]
-  build_number = lane_context[:DG_BUILD_NUMBER]
-  if !UI.confirm("Are you sure to submit beta version '#{version}' build ##{build_number} ?")
-    UI.user_error! "User abort beta version"
-  end
   add_git_tag(
-    tag: get_beta_tag(version: version, build_number: build_number)
+    tag: lane_context[:DG_BUILD_TAG]
   )
   push_to_git_remote()
+  release_branch = git_branch()
+  develop_branch = options[:develop_branch]
   Actions.sh("git checkout #{develop_branch}")
-  Actions.sh("git merge #{beta_branch}")
+  Actions.sh("git merge #{release_branch}")
   push_to_git_remote()
 end
