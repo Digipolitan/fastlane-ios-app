@@ -45,7 +45,7 @@ private_lane :send_app_release do |options|
     )
   end
   add_git_tag(
-    tag: lane_context[:DG_BUILD_TAG]
+    tag: lane_context[SharedValues::GIT_BUILD_TAG]
   )
   push_to_git_remote()
   release_branch = git_branch()
