@@ -8,11 +8,11 @@ lane :select_new_release_version do |options|
   version_number = options[:current_version_number]
   UI.error "You must update your version '#{version_number}'"
   bump_type = UI.select("Select version bump type: ", ["patch", "minor", "major"])
-  lane_context[:DG_RELEASE_VERSION_NUMBER] = get_next_version_number(
+  lane_context[:VERSION_NUMBER] = get_next_version_number(
     version_number: version_number,
     bump_type: bump_type
   )
-  lane_context[:DG_BUILD_NUMBER] = "1"
+  lane_context[:BUILD_NUMBER] = "1"
 end
 
 lane :select_new_build_number do |options|
@@ -30,7 +30,7 @@ lane :select_new_build_number do |options|
   else
     build_number = bump_type
   end
-  lane_context[:DG_BUILD_NUMBER] = build_number
+  lane_context[:BUILD_NUMBER] = build_number
 end
 
 lane :ensure_release_version do |options|
@@ -50,18 +50,18 @@ lane :ensure_release_version do |options|
   build_number = options[:current_build_number]
   while git_tag_exists(tag: "#{prefix_versiontag}#{version_number}") do
     select_new_release_version(version_number: version_number)
-    version_number = lane_context[:DG_RELEASE_VERSION_NUMBER];
-    build_number = lane_context[:DG_BUILD_NUMBER];
+    version_number = lane_context[:VERSION_NUMBER];
+    build_number = lane_context[:BUILD_NUMBER];
   end
   while git_tag_exists(tag: "#{prefix_versiontag}#{version_number}##{build_number}") do
     select_new_build_number(build_number: build_number)
-    build_number = lane_context[:DG_BUILD_NUMBER];
+    build_number = lane_context[:BUILD_NUMBER];
   end
   UI.success "Release version '#{version_number}' build ##{build_number} ready"
+  lane_context[:VERSION_NUMBER] = version_number
+  lane_context[:BUILD_NUMBER] = build_number
   lane_context[:DG_RELEASE_TAG] = "#{prefix_versiontag}#{version_number}"
-  lane_context[:DG_RELEASE_VERSION_NUMBER] = version_number
-  lane_context[:DG_BUILD_NUMBER] = build_number
-  lane_context[:DG_BUILD_TAG] = "#{prefix_versiontag}#{version}##{build_number}"
+  lane_context[:DG_BUILD_TAG] = "#{prefix_versiontag}#{version_number}##{build_number}"
 end
 
 lane :start_app_release do |options|
@@ -81,8 +81,8 @@ lane :start_app_release do |options|
     current_version_number: current_version_number,
     current_build_number: current_build_number
   )
-  release_version_number = lane_context[:DG_RELEASE_VERSION_NUMBER]
-  build_number = lane_context[:DG_BUILD_NUMBER]
+  release_version_number = lane_context[:VERSION_NUMBER]
+  build_number = lane_context[:BUILD_NUMBER]
   if !UI.confirm("Are you sure to submit version '#{release_version_number}' build ##{build_number} ?")
     UI.user_error! "User abort version"
   end
