@@ -7,7 +7,7 @@ private_lane :prepare_app_release do |options|
       :project => {:env_var => "DG_PROJECT"}
     }
   )
-  develop_branch = lane_context[SharedValues::GIT_FLOW_DEVELOP_BRANCH]
+  develop_branch = git_get_develop_branch()
   if git_branch() != develop_branch
     UI.user_error! "You must run this lane on the '#{develop_branch}' only"
   end
@@ -25,7 +25,7 @@ private_lane :prepare_app_release do |options|
 end
 
 private_lane :send_app_release do |options|
-  develop_branch = lane_context[SharedValues::GIT_FLOW_DEVELOP_BRANCH]
+  develop_branch = git_get_develop_branch()
   current_version_number = lane_context[SharedValues::VERSION_NUMBER]
   current_build_number = lane_context[SharedValues::BUILD_NUMBER]
   version_number = lane_context[SharedValues::NEXT_VERSION_NUMBER]
@@ -72,7 +72,7 @@ end
 
 lane :update_app_release do |options|
   prepare_app_release(options)
-  develop_branch = lane_context[SharedValues::GIT_FLOW_DEVELOP_BRANCH]
+  develop_branch = git_get_develop_branch()
   version_number = lane_context[SharedValues::NEXT_VERSION_NUMBER]
   prefix_release = lane_context[SharedValues::GIT_FLOW_RELEASE_PREFIX]
   release_branch = "#{prefix_release}#{version_number}"
@@ -84,4 +84,9 @@ lane :update_app_release do |options|
   end
   Actions.sh("git merge #{develop_branch}")
   send_app_release(options)
+end
+
+lane :prepare_app_deploy do |options|
+  Actions.sh("snapshot init")
+  Actions.sh("deviler init")
 end
