@@ -1,29 +1,3 @@
-private_lane :prepare_app_release do |options|
-  ensure_git_status_clean()
-  ensure_git_flow_init()
-  prepare_lane_options(
-    options: options,
-    mapping: {
-      :project => {:env_var => "DG_PROJECT"}
-    }
-  )
-  develop_branch = git_get_develop_branch()
-  if git_branch() != develop_branch
-    UI.user_error! "You must run this lane on the '#{develop_branch}' only"
-  end
-  version_number = get_version_number(xcodeproj: options[:project])
-  build_number = get_build_number(xcodeproj: options[:project])
-  ensure_version_availability(
-    current_version_number: version_number,
-    current_build_number: build_number
-  )
-  version_number = lane_context[SharedValues::NEXT_VERSION_NUMBER]
-  build_number = lane_context[SharedValues::NEXT_BUILD_NUMBER]
-  if !UI.confirm("Are you sure to submit release version '#{version_number}' build ##{build_number} ?")
-    UI.user_error! "User abort app release"
-  end
-end
-
 private_lane :send_app_release do |options|
   develop_branch = git_get_develop_branch()
   current_version_number = lane_context[SharedValues::VERSION_NUMBER]
@@ -55,7 +29,7 @@ private_lane :send_app_release do |options|
 end
 
 lane :start_app_release do |options|
-  prepare_app_release(options)
+  prepare_for_release(options)
   version = lane_context[SharedValues::NEXT_VERSION_NUMBER]
   begin
     git_flow_release(
@@ -71,7 +45,7 @@ lane :start_app_release do |options|
 end
 
 lane :update_app_release do |options|
-  prepare_app_release(options)
+  prepare_for_release(options)
   develop_branch = git_get_develop_branch()
   version_number = lane_context[SharedValues::NEXT_VERSION_NUMBER]
   prefix_release = lane_context[SharedValues::GIT_FLOW_RELEASE_PREFIX]
@@ -84,9 +58,4 @@ lane :update_app_release do |options|
   end
   Actions.sh("git merge #{develop_branch}")
   send_app_release(options)
-end
-
-lane :prepare_app_deploy do |options|
-  Actions.sh("snapshot init")
-  Actions.sh("deviler init")
 end
