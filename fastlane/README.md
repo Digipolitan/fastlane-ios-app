@@ -15,9 +15,9 @@ fastlane start_app_release
 fastlane update_app_release
 ```
 
-### prepare_app_deploy
+### publish_app_release
 ```
-fastlane prepare_app_deploy
+fastlane publish_app_release
 ```
 
 

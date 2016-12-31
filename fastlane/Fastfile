@@ -1,16 +1,45 @@
-private_lane :send_app_release do |options|
+lane :start_app_release do |options|
+  ensure_git_status_clean()
+  ensure_git_flow_init()
+  prepare_lane_options(
+    options: options,
+    bind_params: [
+      Actions::BindParamBuilder.new(:xcodeproj).env_var("XCODEPROJ").build(),
+      Actions::BindParamBuilder.new(:target_version).env_var("TARGET_VERSION").build(),
+      Actions::BindParamBuilder.new(:skip_pliot).env_var("SKIP_PILOT").default_value(false).build()
+    ]
+  )
   develop_branch = git_get_develop_branch()
-  current_version_number = lane_context[SharedValues::VERSION_NUMBER]
-  current_build_number = lane_context[SharedValues::BUILD_NUMBER]
-  version_number = lane_context[SharedValues::NEXT_VERSION_NUMBER]
-  build_number = lane_context[SharedValues::NEXT_BUILD_NUMBER]
+  if git_branch() != develop_branch
+    UI.user_error! "You must run this lane on the '#{develop_branch}' only"
+  end
+  current_version_number = get_version_number(xcodeproj: options[:xcodeproj])
+  current_build_number = get_build_number(xcodeproj: options[:xcodeproj])
+  prefix_versiontag = Actions.lane_context[SharedValues::GIT_FLOW_VERSIONTAG_PREFIX]
+  git_version_availability(
+    version_number: options[:target_version] != nil ? options[:target_version] : current_version_number,
+    build_number: current_build_number,
+    prefix_versiontag: prefix_versiontag
+  )
+  version_number = Actions.lane_context[SharedValues::NEXT_VERSION_NUMBER]
+  begin
+    git_flow_release(
+      action: "start",
+      name: version_number
+    )
+  rescue
+    UI.user_error! "Cannot start release '#{version}', you are probably starting the current release version\n\
+    * if you want to update a new build release use the following lane : 'update_app_release'\n\
+    * if you want to publish the release use the lane : 'publish_app_release'"
+  end
+  build_number = Actions.lane_context[SharedValues::NEXT_BUILD_NUMBER]
   if current_version_number != version_number || current_build_number != build_number
     increment_version_number(
-      xcodeproj: options[:project],
+      xcodeproj: options[:xcodeproj],
       version_number: version_number
     )
     increment_build_number(
-      xcodeproj: options[:project],
+      xcodeproj: options[:xcodeproj],
       build_number: build_number
     )
     git_commit(
@@ -18,36 +47,45 @@ private_lane :send_app_release do |options|
       message: "Bumped release version '#{version_number}' build ##{build_number}"
     )
   end
-  add_git_tag(
-    tag: lane_context[:GIT_BUILD_TAG]
+  update_pilot_info(skip_pilot: options[:skip_pilot])
+  git_commit(
+    path: ["."],
+    message: "Update pilot info"
   )
+  add_git_tag(tag: Actions.lane_context[SharedValues::GIT_BUILD_TAG])
   push_to_git_remote()
   release_branch = git_branch()
   Actions.sh("git checkout #{develop_branch}")
   Actions.sh("git merge #{release_branch}")
   push_to_git_remote()
-end
-
-lane :start_app_release do |options|
-  prepare_for_release(options)
-  version = lane_context[SharedValues::NEXT_VERSION_NUMBER]
-  begin
-    git_flow_release(
-      action: "start",
-      name: version
-    )
-  rescue
-    UI.user_error! "Cannot start release '#{version}', you are probably starting the current release version\n\
-    * if you want to update a new build release use the following lane : 'update_app_release'\n\
-    * if you want to publish the release use the lane : 'publish_app_release'"
-  end
-  send_app_release(options)
+  UI.success "Successfully started app release !"
 end
 
 lane :update_app_release do |options|
-  prepare_for_release(options)
+  ensure_git_status_clean()
+  ensure_git_flow_init()
+  prepare_lane_options(
+    options: options,
+    bind_params: [
+      Actions::BindParamBuilder.new(:xcodeproj).env_var("XCODEPROJ").build(),
+      Actions::BindParamBuilder.new(:skip_pliot).env_var("SKIP_PILOT").default_value(false).build()
+    ]
+  )
   develop_branch = git_get_develop_branch()
-  version_number = lane_context[SharedValues::NEXT_VERSION_NUMBER]
+  if git_branch() != develop_branch
+    UI.user_error! "You must run this lane on the '#{develop_branch}' only"
+  end
+  current_version_number = get_version_number(xcodeproj: options[:xcodeproj])
+  current_build_number = get_build_number(xcodeproj: options[:xcodeproj])
+  prefix_versiontag = Actions.lane_context[SharedValues::GIT_FLOW_VERSIONTAG_PREFIX]
+  git_version_availability(
+    version_number: current_version_number,
+    build_number: current_build_number,
+    prefix_versiontag: prefix_versiontag
+  )
+  if current_version_number != Actions.lane_context[SharedValues::NEXT_VERSION_NUMBER]
+    UI.user_error! "Cannot update app to a new version number, only the build number change"
+  end
   prefix_release = lane_context[SharedValues::GIT_FLOW_RELEASE_PREFIX]
   release_branch = "#{prefix_release}#{version_number}"
   begin
@@ -57,5 +95,31 @@ lane :update_app_release do |options|
     * first you need to start a new release version with the following lane : 'start_app_release'"
   end
   Actions.sh("git merge #{develop_branch}")
-  send_app_release(options)
+  build_number = Actions.lane_context[SharedValues::NEXT_BUILD_NUMBER]
+  if current_build_number != build_number
+    increment_build_number(
+      xcodeproj: options[:xcodeproj],
+      build_number: build_number
+    )
+    git_commit(
+      path: ["."],
+      message: "Bumped release version '#{version_number}' build ##{build_number}"
+    )
+  end
+  update_pilot_info(skip_pilot: options[:skip_pilot])
+  git_commit(
+    path: ["."],
+    message: "Update pilot info"
+  )
+  add_git_tag(tag: Actions.lane_context[SharedValues::GIT_BUILD_TAG])
+  push_to_git_remote()
+  release_branch = git_branch()
+  Actions.sh("git checkout #{develop_branch}")
+  Actions.sh("git merge #{release_branch}")
+  push_to_git_remote()
+  UI.success "Successfully updated app release !"
+end
+
+lane :publish_app_release do |options|
+  UI.success "Successfully publish app release !"
 end
