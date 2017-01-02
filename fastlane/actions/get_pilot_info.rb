@@ -6,21 +6,21 @@ module Fastlane
     class GetPilotInfoAction < Action
       def self.run(params)
         pilot_info_path = "fastlane/metadata/pilot_info.json"
-        pilot_infos = nil
+        pilot_info = nil
         if File.exists?(pilot_info_path)
           if data = File.read(pilot_info_path)
-            pilot_infos = JSON.parse(data)
+            pilot_info = JSON.parse(data)
           end
         end
-        if pilot_infos == nil
-          pilot_infos = {
+        if pilot_info == nil
+          pilot_info = {
             "beta_app_description": "Your beta app description",
             "beta_app_feedback_email": "feedback@beta.com",
             "changelog": "New build with fastlane",
             "skip": true
           }
         end
-        return pilot_infos
+        return pilot_info
       end
 
       #####################################################

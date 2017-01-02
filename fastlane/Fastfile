@@ -33,6 +33,7 @@ lane :start_app_release do |options|
     * if you want to publish the release use the lane : 'publish_app_release'"
   end
   build_number = Actions.lane_context[SharedValues::NEXT_BUILD_NUMBER]
+  commit_array = []
   if current_version_number != version_number || current_build_number != build_number
     increment_version_number(
       xcodeproj: options[:xcodeproj],
@@ -42,15 +43,13 @@ lane :start_app_release do |options|
       xcodeproj: options[:xcodeproj],
       build_number: build_number
     )
-    git_commit(
-      path: ["."],
-      message: "Bumped release version '#{version_number}' build ##{build_number}"
-    )
+    commit_array << "Bumped release version '#{version_number}' build ##{build_number}"
   end
   update_pilot_info(skip_pilot: options[:skip_pilot])
+  commit_array << "Update pilot info"
   git_commit(
     path: ["."],
-    message: "Update pilot info"
+    message: commit_array.join("\n")
   )
   add_git_tag(tag: Actions.lane_context[SharedValues::GIT_BUILD_TAG])
   push_to_git_remote()
@@ -96,20 +95,19 @@ lane :update_app_release do |options|
   end
   Actions.sh("git merge #{develop_branch}")
   build_number = Actions.lane_context[SharedValues::NEXT_BUILD_NUMBER]
+  commit_array = []
   if current_build_number != build_number
     increment_build_number(
       xcodeproj: options[:xcodeproj],
       build_number: build_number
     )
-    git_commit(
-      path: ["."],
-      message: "Bumped release version '#{version_number}' build ##{build_number}"
-    )
+    commit_array << "Bumped release version '#{version_number}' build ##{build_number}"
   end
   update_pilot_info(skip_pilot: options[:skip_pilot])
+  commit_array << "Update pilot info"
   git_commit(
     path: ["."],
-    message: "Update pilot info"
+    message: commit_array.join("\n")
   )
   add_git_tag(tag: Actions.lane_context[SharedValues::GIT_BUILD_TAG])
   push_to_git_remote()

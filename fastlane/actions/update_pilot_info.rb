@@ -5,23 +5,25 @@ module Fastlane
 
     class UpdatePilotInfoAction < Action
       def self.run(params)
-        pilot_infos = other_action.get_pilot_info()
-        pilot_infos.delete("skip")
-        key = nil
-        loop do
-          pilot_infos.each { |key, value|
-            UI.message("#{key} => #{value}")
-          }
-          break if key == nil and !UI.confirm("Would you like to update a pilot info key ?")
-          key = UI.input("What pilot info key would you like to update ?")
-          if pilot_infos.key?(key)
-            pilot_infos[key] = UI.input("New value for '#{key}'")
+        pilot_info = other_action.get_pilot_info()
+        pilot_info.delete("skip")
+        if params[:skip_pliot] != true
+          key = nil
+          loop do
+            pilot_info.each { |key, value|
+              UI.message("#{key} => #{value}")
+            }
+            break if key == nil and !UI.confirm("Would you like to update a pilot info key ?")
+            key = UI.input("What pilot info key would you like to update ?")
+            if pilot_info.key?(key)
+              pilot_info[key] = UI.input("New value for '#{key}'")
+            end
+            break if !UI.confirm("Would you like to update another key ?")
           end
-          break if !UI.confirm("Would you like to update another key ?")
         end
-        pilot_infos["skip"] = params[:skip_pilot]
+        pilot_info["skip"] = params[:skip_pilot]
         File.open(pilot_info_path, "w") { |file|
-          file.puts(pilot_infos.to_json)
+          file.puts(pilot_info.to_json)
         }
       end
 
