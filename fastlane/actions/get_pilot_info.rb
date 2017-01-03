@@ -5,7 +5,11 @@ module Fastlane
 
     class GetPilotInfoAction < Action
       def self.run(params)
-        pilot_info_path = "fastlane/metadata/pilot_info.json"
+        pilot_info_path = ""
+        if File.exist?("fastlane")
+          pilot_info_path += "fastlane/"
+        end
+        pilot_info_path += "metadata/pilot_info.json"
         pilot_info = nil
         if File.exist?(pilot_info_path)
           if data = File.read(pilot_info_path)

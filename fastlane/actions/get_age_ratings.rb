@@ -5,7 +5,11 @@ module Fastlane
 
     class GetAgeRatingsAction < Action
       def self.run(params)
-        age_ratings_path = "fastlane/metadata/age_ratings.json"
+        age_ratings_path = ""
+        if File.exist?("fastlane")
+          age_ratings_path += "fastlane/"
+        end
+        age_ratings_path += "metadata/age_ratings.json"
         age_ratings = nil
         if File.exist?(age_ratings_path)
           if data = File.read(age_ratings_path)
