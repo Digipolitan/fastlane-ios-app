@@ -31,17 +31,6 @@ module Fastlane
         "Get pilot info used by pilot tool"
       end
 
-      def self.available_options
-        [
-          FastlaneCore::ConfigItem.new(key: :skip_pilot,
-                                       env_name: "SKIP_PILOT",
-                                       description: "Do not publish beta",
-                                       is_string: false,
-                                       optional: true,
-                                       default_value: false)
-        ]
-      end
-
       def self.authors
         ["bbriatte"]
       end

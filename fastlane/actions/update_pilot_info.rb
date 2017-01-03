@@ -7,7 +7,7 @@ module Fastlane
       def self.run(params)
         pilot_info = other_action.get_pilot_info()
         pilot_info.delete("skip")
-        if params[:skip_pliot] != true
+        if params[:skip_pilot] != true
           key = nil
           loop do
             pilot_info.each { |key, value|
@@ -41,7 +41,6 @@ module Fastlane
                                        env_name: "SKIP_PILOT",
                                        description: "Do not publish beta",
                                        is_string: false,
-                                       optional: true,
                                        default_value: false)
         ]
       end
