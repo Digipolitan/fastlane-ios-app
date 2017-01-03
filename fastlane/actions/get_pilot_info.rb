@@ -14,10 +14,10 @@ module Fastlane
         end
         if pilot_info == nil
           pilot_info = {
-            "beta_app_description": "Your beta app description",
-            "beta_app_feedback_email": "feedback@beta.com",
-            "changelog": "New build with fastlane",
-            "skip": true
+            "beta_app_description" => "Your beta app description",
+            "beta_app_feedback_email" => "feedback@beta.com",
+            "changelog" => "New build with fastlane",
+            "skip" => true
           }
         end
         return pilot_info
