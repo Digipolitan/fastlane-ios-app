@@ -6,7 +6,7 @@ lane :start_app_release do |options|
     bind_params: [
       Actions::BindParamBuilder.new(:xcodeproj).env_var("XCODEPROJ").build(),
       Actions::BindParamBuilder.new(:target_version).env_var("TARGET_VERSION").build(),
-      Actions::BindParamBuilder.new(:skip_pliot).env_var("SKIP_PILOT").transform(BindParamTransform::Boolean).default_value(false).build()
+      Actions::BindParamBuilder.new(:skip_pliot).env_var("SKIP_PILOT").transform(Actions::BindParamTransform::Boolean).default_value(false).build()
     ]
   )
   develop_branch = git_get_develop_branch()
@@ -67,7 +67,7 @@ lane :update_app_release do |options|
     options: options,
     bind_params: [
       Actions::BindParamBuilder.new(:xcodeproj).env_var("XCODEPROJ").build(),
-      Actions::BindParamBuilder.new(:skip_pliot).env_var("SKIP_PILOT").transform(BindParamTransform::Boolean).default_value(false).build()
+      Actions::BindParamBuilder.new(:skip_pliot).env_var("SKIP_PILOT").transform(Actions::BindParamTransform::Boolean).default_value(false).build()
     ]
   )
   develop_branch = git_get_develop_branch()
