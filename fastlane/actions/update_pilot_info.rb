@@ -22,7 +22,7 @@ module Fastlane
           end
         end
         pilot_info["skip"] = params[:skip_pilot]
-        File.open(pilot_info_path, "w") { |file|
+        File.open("fastlane/metadata/pilot_info.json", "w") { |file|
           file.puts(pilot_info.to_json)
         }
       end
