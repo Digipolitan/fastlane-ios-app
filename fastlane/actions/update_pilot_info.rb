@@ -41,6 +41,7 @@ module Fastlane
                                        env_name: "SKIP_PILOT",
                                        description: "Do not publish beta",
                                        is_string: false,
+                                       optional: true,
                                        default_value: false)
         ]
       end
