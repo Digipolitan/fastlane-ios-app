@@ -7,7 +7,7 @@ module Fastlane
       def self.run(params)
         pilot_info_path = "fastlane/metadata/pilot_info.json"
         pilot_info = nil
-        if File.exists?(pilot_info_path)
+        if File.exist?(pilot_info_path)
           if data = File.read(pilot_info_path)
             pilot_info = JSON.parse(data)
           end

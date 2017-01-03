@@ -22,6 +22,9 @@ module Fastlane
           end
           break if !UI.confirm("Would you like to update another key ?")
         end
+        if !Dir.exist?("fastlane/metadata")
+          Dir.mkdir("fastlane/metadata")
+        end
         File.open("fastlane/metadata/age_ratings.json", "w") { |file|
           file.puts(age_ratings.to_json)
         }

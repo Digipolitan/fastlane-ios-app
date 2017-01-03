@@ -22,6 +22,9 @@ module Fastlane
           end
         end
         pilot_info["skip"] = params[:skip_pilot]
+        if !Dir.exist?("fastlane/metadata")
+          Dir.mkdir("fastlane/metadata")
+        end
         File.open("fastlane/metadata/pilot_info.json", "w") { |file|
           file.puts(pilot_info.to_json)
         }
