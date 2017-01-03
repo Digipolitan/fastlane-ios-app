@@ -86,7 +86,7 @@ lane :update_app_release do |options|
     UI.user_error! "Cannot update app to a new version number, only the build number change"
   end
   prefix_release = lane_context[SharedValues::GIT_FLOW_RELEASE_PREFIX]
-  release_branch = "#{prefix_release}#{version_number}"
+  release_branch = "#{prefix_release}#{current_version_number}"
   begin
     Actions.sh("git checkout #{release_branch}")
   rescue
@@ -101,7 +101,7 @@ lane :update_app_release do |options|
       xcodeproj: options[:xcodeproj],
       build_number: build_number
     )
-    commit_array << "Bumped release version '#{version_number}' build ##{build_number}"
+    commit_array << "Bumped release version '#{current_version_number}' build ##{build_number}"
   end
   update_pilot_info(skip_pilot: options[:skip_pilot])
   commit_array << "Update pilot info"
